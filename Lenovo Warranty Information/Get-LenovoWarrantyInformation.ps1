@@ -20,7 +20,8 @@
 
 $CustomWMIClass = "CM_MachineWarranty"
 
-<# Uncomment if Proxy Server requires Authentication 
+#Uncomment the below section if Proxy Authentication is required.
+<#
 $Wcl = New-Object System.Net.WebClient
 $Wcl.Headers.Add("user-agent", "PowerShell Script")
 $Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
@@ -28,7 +29,7 @@ $Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 
 $Model = (Get-CimInstance -Class Win32_ComputerSystem).Model
 $SerialNumber = (Get-CimInstance -Class Win32_SystemEnclosure).SerialNumber
-$Pwd = "SET CLIENT ID HERE"
+$Pwd = "ENTER CLIENT ID HERE"
 
 $URL = "https://ibase.lenovo.com/POIRequest.aspx"
 $Method = "POST"
@@ -50,23 +51,31 @@ $TempFile = "${env:TEMP}\$RandomFileName"
 #Export to Clixml to use XPath to retrieve the Extended Warranty Information
 $Result | Export-Clixml -Path $TempFile
 
-$WarrantyInformation = [PSCustomObject]@{
-Model = $Result.warrantyInfo.machineinfo.model
-Product = $Result.warrantyInfo.machineinfo.product
-StartDate = $Result.warrantyInfo.serviceInfo.warstart[0]
-ExpirationDate = $Result.warrantyInfo.serviceInfo.wed[0]
-Description = $Result.warrantyInfo.serviceInfo.sdfDesc[0]
-ExtendedExpiration = (Select-XML -Path $TempFile -XPath "//*[@N='mEndDate']").Node.InnerText[0]
-ExtendedDescription = (Select-XML -Path $TempFile -XPath "//*[@N='mSDFDesc']").Node.InnerText[0]
-Location = $Result.warrantyInfo.serviceInfo.countryDesc[0]
+Try{
+    $ExtendedExpiration = (Select-XML -Path $TempFile -XPath "//*[@N='mEndDate']").Node.InnerText[0]
+    $ExtendedDescription = (Select-XML -Path $TempFile -XPath "//*[@N='mSDFDesc']").Node.InnerText[0]
 }
+Catch{}
 
 Remove-Item -Path $TempFile -Force
 
 #Check Extended Warranty Info and re-write values if the machine doesn't have warranty:
-If($WarrantyInformation.ExtendedExpiration -notmatch "^\d{4}"){
-    $WarrantyInformation.ExtendedExpiration = "N/A"
-    $WarrantyInformation.ExtendedDescription = "This machine does not have extended Premier Support."
+If($ExtendedExpiration -notmatch "^\d{4}"){
+    $ExtendedExpiration = "N/A"
+    $ExtendedDescription = "This machine does not have extended Premier Support."
+}
+
+$WarrantyInformation = [PSCustomObject]@{
+Type = $Result.warrantyInfo.machineinfo.type
+Model = $Result.warrantyInfo.machineinfo.model
+Product = $Result.warrantyInfo.machineinfo.product
+SerialNumber = $Result.warrantyInfo.machineinfo.serial
+StartDate = $Result.warrantyInfo.serviceInfo.warstart[0]
+ExpirationDate = $Result.warrantyInfo.serviceInfo.wed[0]
+ExtendedExpiration = $ExtendedExpiration
+ExtendedDescription = $ExtendedDescription
+Location = $Result.warrantyInfo.serviceInfo.countryDesc[0]
+Description = $Result.warrantyInfo.serviceInfo.sdfDesc[0]
 }
 
 #Check if the WMI Class Exists
@@ -93,6 +102,8 @@ $NewWMIClass = New-Object System.Management.ManagementClass("root\cimv2",[String
 
 $NewWMIClass["__CLASS"] = $CustomWMIClass
 $NewWMIClass.Qualifiers.Add("Static",$true)
+$NewWMIClass.Properties.Add("Type",[System.Management.CimType]::String,$false)
+$NewWMIClass.Properties["Type"].Qualifiers.Add("Key",$true)
 $NewWMIClass.Properties.Add("Model",[System.Management.CimType]::String,$false)
 $NewWMIClass.Properties["Model"].Qualifiers.Add("Key",$true)
 $NewWMIClass.Properties.Add("Product",[System.Management.CimType]::String,$false)
@@ -112,9 +123,10 @@ ForEach($_ in $WarrantyInformation){
     $WMIClass = Get-WmiObject -Class $CustomWMIClass -List
     
     $WMIInstance = $WMIClass.CreateInstance()
+    $WMIInstance.Type = $_.Type
     $WMIInstance.Model = $_.Model
     $WMIInstance.Product = $_.Product
-    $WMIInstance.SerialNumber = $SerialNumber
+    $WMIInstance.SerialNumber = $_.SerialNumber
     $WMIInstance.StartDate = $_.StartDate
     $WMIInstance.ExpirationDate = $_.ExpirationDate
     $WMIInstance.ExtendedExpiration = $_.ExtendedExpiration
