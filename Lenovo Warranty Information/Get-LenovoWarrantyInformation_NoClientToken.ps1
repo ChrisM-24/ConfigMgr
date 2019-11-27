@@ -29,7 +29,7 @@ $Wcl.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 
 $Model = (Get-CimInstance -Class Win32_ComputerSystem).Model
 $SerialNumber = (Get-CimInstance -Class Win32_SystemEnclosure).SerialNumber
-$Pwd = "ENTER CLIENT ID HERE"
+$Pwd = "IBA4LSC3"
 
 $URL = "https://ibase.lenovo.com/POIRequest.aspx"
 $Method = "POST"
