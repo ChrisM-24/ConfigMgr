@@ -33,7 +33,7 @@ Try{
 Catch [Exception]
 {
     Write-Output "Unable to connect to Remote Address. Please check Internet Access."
-    [System.Environment]::Exit(2)
+    Exit
 }
 
 #Define the Regex to find the first non-digit or -
