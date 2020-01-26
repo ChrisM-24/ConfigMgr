@@ -41,8 +41,8 @@ Try{
 }
 Catch [Exception]
 {
-    Write-Output "Unable to connect to Remote Address. Please check Internet Access."
-    [System.Environment]::Exit(2)
+    #Write-Output "Unable to connect to Remote Address. Please check Internet Access."
+    Exit
 }
 
 $RandomFileName = [io.path]::GetRandomFileName() + ".xml"
