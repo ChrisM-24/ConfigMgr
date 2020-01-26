@@ -32,7 +32,7 @@ Try{
 }
 Catch [Exception]
 {
-    Write-Output "Unable to connect to Remote Address. Please check Internet Access."
+    #Write-Output "Unable to connect to Remote Address. Please check Internet Access."
     Exit
 }
 
